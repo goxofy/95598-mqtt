@@ -1,0 +1,22 @@
+# System
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+
+# Environments
+.env
+.venv/
+env/
+venv/
+
+# Project Specific
+errors/
+*.db
+.vscode/
+__pycache__/
+
+
+captcha_debug_*.png

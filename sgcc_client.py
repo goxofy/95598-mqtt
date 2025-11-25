@@ -196,26 +196,6 @@ class SGCCSpider:
             slider_offset = int(os.getenv("SLIDER_OFFSET", 0))
             final_distance += slider_offset
             
-            # --- Debug: Save image with box ---
-            try:
-                from PIL import ImageDraw
-                debug_img = image.copy()
-                draw = ImageDraw.Draw(debug_img)
-                # Draw a vertical line at the detected gap position
-                draw.line([(gap_pos, 0), (gap_pos, image.height)], fill="red", width=3)
-                
-                # Draw a vertical line at the final target position (mapped back to image coordinates)
-                # We need to reverse the offset and scaling to show where we are actually going on the original image
-                target_on_img = int((final_distance) / scale_factor)
-                draw.line([(target_on_img, 0), (target_on_img, image.height)], fill="green", width=2)
-                
-                if not os.path.exists("errors"):
-                    os.makedirs("errors")
-                debug_img.save(f"errors/captcha_debug_{int(time.time())}_{attempt}.png")
-            except Exception as e:
-                logging.error(f"Failed to save debug image: {e}")
-            # ----------------------------------
-
             logging.info(f"Captcha: Gap={gap_pos}, Scale={scale_factor:.2f}, Offset={slider_offset}, FinalDist={final_distance}")
             
             self.simulate_slide(driver, final_distance)

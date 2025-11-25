@@ -25,13 +25,7 @@
 
 ### 1. Docker Run
 
-如果你熟悉 Docker，可以直接构建镜像运行，环境隔离更省心。
-
-**构建镜像：**
-
-```bash
-docker build -t 95598-mqtt .
-```
+如果你熟悉 Docker，可以直接使用镜像运行，环境隔离更省心。
 
 **运行容器：**
 
@@ -44,7 +38,7 @@ docker run -d \
   -v $(pwd)/data:/data \
   -v $(pwd)/errors:/app/errors \
   --env-file .env \
-  95598-mqtt
+  ghcr.io/goxofy/95598-mqtt:main
 ```
 
 ### 2. Docker Compose

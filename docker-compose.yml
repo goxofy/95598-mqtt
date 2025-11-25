@@ -1,7 +1,6 @@
 services:
   95598-mqtt:
-    build: .
-    image: 95598-mqtt
+    image: ghcr.io/goxofy/95598-mqtt:main
     container_name: 95598-mqtt
     restart: unless-stopped
     volumes:
@@ -11,4 +10,6 @@ services:
       - .env
     environment:
       - TZ=Asia/Shanghai
-    # network_mode: host # Uncomment if your MQTT broker is on localhost
+    #如果报 pthread_create error, 可以尝试取消下面两行注释
+    # security_opt:
+    #   - seccomp:unconfined

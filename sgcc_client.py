@@ -318,6 +318,16 @@ class SGCCSpider:
             
             if driver.current_url == URL_LOGIN:
                 logging.info(f"Login failed (Attempt {attempt}), retrying captcha...")
+                
+                # Capture screenshot to see the error message
+                try:
+                    timestamp = time.strftime("%Y%m%d_%H%M%S")
+                    error_shot_path = f"./errors/login_fail_{timestamp}.png"
+                    driver.save_screenshot(error_shot_path)
+                    logging.info(f"Saved login failure screenshot to {error_shot_path}")
+                except Exception as e:
+                    logging.warning(f"Failed to save failure screenshot: {e}")
+
                 self._click_element(driver, By.CLASS_NAME, "el-button.el-button--primary")
                 time.sleep(self.retry_delay * 2)
             else:
@@ -327,9 +337,11 @@ class SGCCSpider:
     def run(self):
         driver = self.init_driver()
         ScreenshotOnFailure.set_driver(driver)
-        driver.maximize_window()
-        time.sleep(self.retry_delay)
-        logging.info("Driver initialized.")
+        
+        # Force window size for headless mode
+        driver.set_window_size(1920, 1080)
+        size = driver.get_window_size()
+        logging.info(f"Driver initialized. Window size: {size}")
         
         publisher = MQTTPublisher()
         

@@ -268,6 +268,34 @@ class SGCCSpider:
         for attempt in range(1, self.max_retries + 1):
             logging.info(f"Attempt {attempt}: Solving captcha...")
             
+            # Optimization: Randomly refresh 1-2 times before solving
+            refresh_count = random.randint(1, 2)
+            for r in range(refresh_count):
+                logging.info(f"Pre-solve refresh {r+1}/{refresh_count}...")
+                delay = random.uniform(7, 10)
+                logging.info(f"Waiting {delay:.2f}s before refresh...")
+                time.sleep(delay)
+                
+                try:
+                    # Try common selectors for the refresh button
+                    refresh_btns = driver.find_elements(By.CLASS_NAME, "slide-verify-refresh-icon")
+                    if not refresh_btns:
+                        refresh_btns = driver.find_elements(By.XPATH, "//*[@id='slideVerify']//i[contains(@class, 'refresh')]")
+                    
+                    if refresh_btns:
+                        refresh_btns[0].click()
+                        logging.info("Clicked refresh button.")
+                    else:
+                        logging.warning("Could not find refresh button, skipping refresh.")
+                        break
+                except Exception as e:
+                    logging.warning(f"Failed to refresh captcha: {e}")
+            
+            # Wait before actual solve
+            pre_solve_delay = random.uniform(7, 10)
+            logging.info(f"Waiting {pre_solve_delay:.2f}s before solving...")
+            time.sleep(pre_solve_delay)
+            
             # Get image and dimensions
             js_img = 'return document.getElementById("slideVerify").childNodes[0].toDataURL("image/png");'
             base64_img = driver.execute_script(js_img)

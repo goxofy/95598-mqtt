@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+import glob
 import time
 import random
 import base64
@@ -38,7 +39,20 @@ class SGCCSpider:
             dotenv.load_dotenv(verbose=True)
         self.username = username
         self.password = password
-        self.resolver = CaptchaResolver(os.path.join(os.path.dirname(__file__), "captcha.onnx"))
+        self.username = username
+        self.password = password
+        
+        # Handle potential inline comments in .env (Docker --env-file doesn't strip them)
+        raw_solver_type = os.getenv("CAPTCHA_SOLVER_TYPE", "onnx")
+        self.solver_type = raw_solver_type.split('#')[0].strip().lower()
+        
+        if self.solver_type == "vlm":
+            from vlm_solver import VLMCaptchaResolver
+            self.resolver = VLMCaptchaResolver()
+            logging.info("Using VLM Captcha Solver")
+        else:
+            self.resolver = CaptchaResolver(os.path.join(os.path.dirname(__file__), "captcha.onnx"))
+            logging.info("Using ONNX Captcha Solver")
 
         self.enable_db = os.getenv("ENABLE_DATABASE_STORAGE", "false").lower() == "true"
         self.wait_time = int(os.getenv("DRIVER_IMPLICITY_WAIT_TIME", 60))
@@ -55,39 +69,84 @@ class SGCCSpider:
         except Exception:
             driver.execute_script("arguments[0].click();", element)
 
-    def simulate_slide(self, driver, distance):
-        slider = driver.find_element(By.CLASS_NAME, "slide-verify-slider-mask-item")
-        ActionChains(driver).click_and_hold(slider).perform()
-        
-        # Simplified Human-like trajectory
+    def get_tracks(self, distance):
+        """
+        Generate human-like tracks based on distance
+        :param distance: Total distance to slide (pixels)
+        :return: List of x-offsets
+        """
         tracks = []
         current = 0
-        mid = distance * 3 / 4
-        t = 0.2
-        v = 0
+        mid = distance * 4 / 5 # Decelerate after 4/5
+        t = 0.2 # Time interval
+        v = 0 # Initial velocity
         
         while current < distance:
             if current < mid:
-                a = 2
+                # Acceleration phase
+                a = 2 + random.uniform(-0.5, 0.5)
             else:
-                a = -3
+                # Deceleration phase
+                a = -3 + random.uniform(-0.5, 0.5)
+
             v0 = v
             v = v0 + a * t
-            move = v0 * t + 1 / 2 * a * t * t
+            move = v0 * t + 0.5 * a * t * t
             current += move
             tracks.append(round(move))
-            
-        # Fix overshoot/undershoot
-        if sum(tracks) < distance:
-            tracks.append(distance - sum(tracks))
-        elif sum(tracks) > distance:
-            tracks[-1] -= (sum(tracks) - distance)
 
-        for x in tracks:
-            ActionChains(driver).move_by_offset(xoffset=x, yoffset=0).perform()
+        # Correction
+        generated_distance = sum(tracks)
+        diff = distance - generated_distance
+        if diff != 0:
+            tracks.append(diff)
             
-        time.sleep(0.5)
+        return tracks
+
+    def get_tracks_with_jitter(self, distance):
+        """
+        Advanced tracks with Y-axis jitter and overshoot
+        """
+        tracks = self.get_tracks(distance)
+        
+        # Simulate overshoot
+        if random.choice([True, False]):
+            overshoot = random.randint(2, 5)
+            tracks.append(overshoot)
+            tracks.append(-overshoot)
+        
+        return tracks
+
+    def simulate_slide(self, driver, distance):
+        slider = driver.find_element(By.CLASS_NAME, "slide-verify-slider-mask-item")
+        
+        # 1. Generate tracks
+        tracks = self.get_tracks_with_jitter(distance)
+        logging.info(f"Generated tracks: {len(tracks)} steps, Total distance: {sum(tracks)}")
+
+        # 2. Click and hold
+        ActionChains(driver).click_and_hold(slider).perform()
+        time.sleep(random.uniform(0.1, 0.3))
+
+        # 3. Move along tracks
+        for x_offset in tracks:
+            if x_offset == 0:
+                continue
+                
+            # Y-axis jitter
+            y_offset = random.choice([-1, 0, 1])
+            
+            ActionChains(driver).move_by_offset(xoffset=x_offset, yoffset=y_offset).perform()
+            
+            # Random micro-pause
+            time.sleep(random.uniform(0.01, 0.03))
+
+        # 4. Pause before release
+        time.sleep(random.uniform(0.2, 0.5))
+        
+        # 5. Release
         ActionChains(driver).release().perform()
+        logging.info("Slide completed")
 
     def init_db(self, user_id):
         try:
@@ -234,6 +293,26 @@ class SGCCSpider:
             
             logging.info(f"Captcha: Gap={gap_pos}, Scale={scale_factor:.2f}, Offset={slider_offset}, FinalDist={final_distance}")
             
+            # Save debug image with lines
+            try:
+                from PIL import ImageDraw
+                debug_img = image.copy()
+                draw = ImageDraw.Draw(debug_img)
+                
+                # Red line: Original VLM detection
+                draw.line([(gap_pos, 0), (gap_pos, debug_img.height)], fill="red", width=3)
+                
+                # Green line: Final target (converted back to image scale)
+                final_target_on_image = int(final_distance / scale_factor)
+                draw.line([(final_target_on_image, 0), (final_target_on_image, debug_img.height)], fill="green", width=3)
+                
+                timestamp = time.strftime("%Y%m%d_%H%M%S")
+                debug_path = f"./errors/captcha_{timestamp}.png"
+                debug_img.save(debug_path)
+                logging.info(f"Saved debug captcha image to {debug_path}")
+            except Exception as e:
+                logging.warning(f"Failed to save debug image: {e}")
+
             self.simulate_slide(driver, final_distance)
             time.sleep(self.retry_delay)
             
@@ -290,7 +369,21 @@ class SGCCSpider:
                 continue
 
         logging.info("All tasks completed successfully.")
+        self.cleanup_debug_images()
         driver.quit()
+
+    def cleanup_debug_images(self):
+        try:
+            files = glob.glob("./errors/captcha_*.png")
+            for f in files:
+                try:
+                    os.remove(f)
+                except Exception as e:
+                    logging.warning(f"Failed to remove {f}: {e}")
+            if files:
+                logging.info(f"Cleaned up {len(files)} debug captcha images.")
+        except Exception as e:
+            logging.warning(f"Error during cleanup: {e}")
 
     def get_current_user_id(self, driver):
         return driver.find_element(By.XPATH, '//*[@id="app"]/div/div/article/div/div/div[2]/div/div/div[1]/div[2]/div/div/div/div[2]/div/div[1]/div/ul/div/li[1]/span[2]').text

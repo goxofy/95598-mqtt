@@ -2,6 +2,7 @@ selenium
 schedule==1.2.1
 Pillow
 webdriver-manager==4.0.2
+openai
 onnxruntime
 numpy
 paho-mqtt==1.6.1

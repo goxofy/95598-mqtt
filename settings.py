@@ -6,7 +6,7 @@ URL_USAGE = "https://95598.cn/osgweb/electricityCharge"
 URL_BALANCE = "https://95598.cn/osgweb/userAcc"
 
 # MQTT Defaults
-DEFAULT_MQTT_PREFIX = "sgcc_electricity"
+DEFAULT_MQTT_PREFIX = "95598"
 DEFAULT_DISCOVERY_PREFIX = "homeassistant"
 DEFAULT_COMPONENT = "sensor"
 

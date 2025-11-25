@@ -45,7 +45,7 @@ class SGCCSpider:
         self.max_retries = int(os.getenv("RETRY_TIMES_LIMIT", 5))
         self.login_timeout = int(os.getenv("LOGIN_EXPECTED_TIME", 10))
         self.retry_delay = int(os.getenv("RETRY_WAIT_TIME_OFFSET_UNIT", 10))
-        self.ignored_users = os.getenv("IGNORE_USER_ID", "xxxxx,xxxxx").split(",")
+        self.ignored_users = [u.strip() for u in os.getenv("IGNORE_USER_ID", "").split(",") if u.strip()]
 
     def _click_element(self, driver, by, value):
         element = driver.find_element(by, value)
@@ -147,8 +147,26 @@ class SGCCSpider:
             options.add_argument('--disable-dev-shm-usage')
             options.add_argument("--window-size=1920,1080")
             
-            driver_path = ChromeDriverManager().install()
-            driver = webdriver.Chrome(options=options, service=ChromeService(driver_path))
+            chrome_binary = os.getenv("CHROME_BINARY_PATH")
+            # Fallback for Docker if env var is empty (overridden by .env)
+            if not chrome_binary and os.environ.get('PYTHON_IN_DOCKER') == 'true':
+                chrome_binary = "/usr/bin/chromium"
+
+            if chrome_binary:
+                options.binary_location = chrome_binary
+            
+            chromedriver_path = os.getenv("CHROMEDRIVER_PATH")
+            # Fallback for Docker if env var is empty (overridden by .env)
+            if not chromedriver_path and os.environ.get('PYTHON_IN_DOCKER') == 'true':
+                chromedriver_path = "/usr/bin/chromedriver"
+
+            if chromedriver_path:
+                service = ChromeService(executable_path=chromedriver_path)
+            else:
+                driver_path = ChromeDriverManager().install()
+                service = ChromeService(driver_path)
+                
+            driver = webdriver.Chrome(options=options, service=service)
             driver.implicitly_wait(self.wait_time)
         return driver
 
@@ -173,11 +191,23 @@ class SGCCSpider:
         logging.info("Inputting password...")
         inputs[1].send_keys(self.password)
 
+        logging.info("Clicking login button...")
         self._click_element(driver, By.CLASS_NAME, "el-button.el-button--primary")
-        time.sleep(self.retry_delay * 2)
+        logging.info("Waiting for captcha to appear...")
+        
+        # Wait for captcha modal to appear
+        try:
+            WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.ID, "slideVerify")))
+            logging.info("Captcha modal appeared.")
+        except:
+            logging.warning("Captcha modal did not appear! Retrying login click...")
+            self._click_element(driver, By.CLASS_NAME, "el-button.el-button--primary")
+            time.sleep(5)
+
+        time.sleep(self.retry_delay)
 
         for attempt in range(1, self.max_retries + 1):
-            self._click_element(driver, By.XPATH, '//*[@id="login_box"]/div[1]/div[1]/div[2]/span')
+            logging.info(f"Attempt {attempt}: Solving captcha...")
             
             # Get image and dimensions
             js_img = 'return document.getElementById("slideVerify").childNodes[0].toDataURL("image/png");'
@@ -259,6 +289,7 @@ class SGCCSpider:
                 logging.error(f"Failed to process user {user_id}: {e}")
                 continue
 
+        logging.info("All tasks completed successfully.")
         driver.quit()
 
     def get_current_user_id(self, driver):

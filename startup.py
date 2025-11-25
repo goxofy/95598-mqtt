@@ -22,6 +22,9 @@ def execute_job(spider: SGCCSpider, max_retries: int):
     for attempt in range(1, max_retries + 1):
         try:
             spider.run()
+            next_run = schedule.next_run()
+            if next_run:
+                logging.info(f"Going to sleep. Next run scheduled at: {next_run.strftime('%Y-%m-%d %H:%M:%S')}")
             return
         except Exception as e:
             logging.error(f"Job failed (Attempt {attempt}/{max_retries}): {e}")

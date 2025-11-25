@@ -14,6 +14,7 @@ venv/
 
 # Project Specific
 errors/
+data/
 *.db
 .vscode/
 __pycache__/

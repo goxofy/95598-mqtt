@@ -66,9 +66,46 @@ SLIDER_OFFSET=0        # 验证码滑块偏移量微调（像素）
 
 ### 4. 运行
 
-```bash
 python3 startup.py
 ```
+
+### 5. Docker 部署（推荐）
+
+如果你熟悉 Docker，可以直接构建镜像运行，环境隔离更省心。
+
+**构建镜像：**
+
+```bash
+docker build -t sgcc_electricity .
+```
+
+**运行容器：**
+
+方式一：使用 `.env` 文件（推荐）
+
+```bash
+docker run -d \
+  --name sgcc_electricity \
+  --restart unless-stopped \
+  -v $(pwd)/data:/data \
+  --env-file .env \
+  sgcc_electricity
+```
+
+方式二：手动指定环境变量
+
+```bash
+docker run -d \
+  --name sgcc_electricity \
+  --restart unless-stopped \
+  -v $(pwd)/data:/data \
+  -e PHONE_NUMBER="你的账号" \
+  -e PASSWORD="你的密码" \
+  -e MQTT_BROKER="192.168.1.100" \
+  sgcc_electricity
+```
+
+> 注意：Docker 模式下，数据库文件会保存在挂载的 `/data` 目录中。
 
 ## 集成说明
 

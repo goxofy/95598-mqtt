@@ -1,8 +1,6 @@
-# ⚡️ SGCC Electricity Data Fetcher
+# ⚡️ 95598 Data Fetcher
 
-## 简介
-
-本项目用于自动获取国家电网（SGCC）的电费和用电量数据，并通过 MQTT 协议发布。支持数据持久化存储到 SQLite 数据库。
+本项目用于自动获取国家电网（95598）的电费和用电量数据，并通过 MQTT 协议发布。支持数据持久化存储到 SQLite 数据库。
 
 **核心功能：**
 1. **自动抓取**：定时从国网获取每日用电量、电费余额、年度/月度统计数据。
@@ -23,22 +21,56 @@
 | `month_usage` | 最近一个月用电量 | kWh |
 | `month_charge` | 上月总电费 | CNY |
 
-## 安装与配置
+## 运行模式
 
-### 1. 准备工作
+### 1. Docker Run
 
-1. 注册[国家电网账户](https://www.95598.cn/osgweb/login)，绑定户号。
-2. 确保环境中有 Python 3.x。
+如果你熟悉 Docker，可以直接构建镜像运行，环境隔离更省心。
 
-### 2. 克隆代码
+**构建镜像：**
 
 ```bash
-git clone https://github.com/goxofy/95598-mqtt.git
-cd 95598-mqtt
+docker build -t 95598-mqtt .
+```
+
+**运行容器：**
+
+推荐使用 `.env` 文件管理配置：
+
+```bash
+docker run -d \
+  --name 95598-mqtt \
+  --restart unless-stopped \
+  -v $(pwd)/data:/data \
+  -v $(pwd)/errors:/app/errors \
+  --env-file .env \
+  95598-mqtt
+```
+
+### 2. Docker Compose
+
+本项目提供了 `docker-compose.yml`，你可以直接使用 Compose 启动：
+
+```bash
+docker-compose up -d
+```
+
+### 3. 本地运行
+
+如果你想在本地直接运行 Python 脚本：
+
+**准备工作：**
+1. 注册[国家电网账户](https://www.95598.cn/osgweb/login)，绑定户号。
+2. 确保环境中有 Python 3.x。
+3. 安装了 Google Chrome 浏览器。
+
+**安装依赖：**
+
+```bash
 pip install -r requirements.txt
 ```
 
-### 3. 配置环境变量
+**配置环境变量：**
 
 复制 `example.env` 为 `.env` 并修改配置：
 
@@ -46,66 +78,11 @@ pip install -r requirements.txt
 cp example.env .env
 ```
 
-`.env` 核心配置项：
+**运行：**
 
 ```bash
-# 国网账号密码
-PHONE_NUMBER="你的账号"
-PASSWORD="你的密码"
-
-# MQTT 配置
-MQTT_BROKER="localhost"
-MQTT_PORT=1883
-MQTT_USER="user"
-MQTT_PASSWORD="password"
-
-# 运行参数
-JOB_START_TIME="07:00" # 每天执行时间
-SLIDER_OFFSET=0        # 验证码滑块偏移量微调（像素）
-```
-
-### 4. 运行
-
 python3 startup.py
 ```
-
-### 5. Docker 部署（推荐）
-
-如果你熟悉 Docker，可以直接构建镜像运行，环境隔离更省心。
-
-**构建镜像：**
-
-```bash
-docker build -t sgcc_electricity .
-```
-
-**运行容器：**
-
-方式一：使用 `.env` 文件（推荐）
-
-```bash
-docker run -d \
-  --name sgcc_electricity \
-  --restart unless-stopped \
-  -v $(pwd)/data:/data \
-  --env-file .env \
-  sgcc_electricity
-```
-
-方式二：手动指定环境变量
-
-```bash
-docker run -d \
-  --name sgcc_electricity \
-  --restart unless-stopped \
-  -v $(pwd)/data:/data \
-  -e PHONE_NUMBER="你的账号" \
-  -e PASSWORD="你的密码" \
-  -e MQTT_BROKER="192.168.1.100" \
-  sgcc_electricity
-```
-
-> 注意：Docker 模式下，数据库文件会保存在挂载的 `/data` 目录中。
 
 ## 集成说明
 
@@ -114,3 +91,17 @@ docker run -d \
 只要你的 Home Assistant 配置了 MQTT 集成，运行本项目后，上述数据实体会自动出现在 Home Assistant 中，无需任何手动配置。
 
 对于其他平台，请订阅配置的 MQTT Topic 前缀（默认 `sgcc/`）获取数据。
+
+## 环境变量说明
+
+| 变量名 | 说明 | 默认值 |
+| :--- | :--- | :--- |
+| `PHONE_NUMBER` | 国网账号 | 必填 |
+| `PASSWORD` | 国网密码 | 必填 |
+| `MQTT_BROKER` | MQTT 服务器地址 | `localhost` |
+| `MQTT_PORT` | MQTT 端口 | `1883` |
+| `MQTT_USER` | MQTT 用户名 | (空) |
+| `MQTT_PASSWORD` | MQTT 密码 | (空) |
+| `JOB_START_TIME` | 每天定时运行时间 | `07:00` |
+| `SLIDER_OFFSET` | 验证码滑块偏移微调 | `0` |
+| `IGNORE_USER_ID` | 忽略的户号(逗号分隔) | (空) |

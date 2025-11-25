@@ -1,0 +1,14 @@
+services:
+  95598-mqtt:
+    build: .
+    image: 95598-mqtt
+    container_name: 95598-mqtt
+    restart: unless-stopped
+    volumes:
+      - ./data:/data
+      - ./errors:/app/errors
+    env_file:
+      - .env
+    environment:
+      - TZ=Asia/Shanghai
+    # network_mode: host # Uncomment if your MQTT broker is on localhost

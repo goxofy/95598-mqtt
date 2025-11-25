@@ -288,7 +288,7 @@ class SGCCSpider:
             final_distance = int(gap_pos * scale_factor)
             
             # Apply manual offset
-            slider_offset = int(os.getenv("SLIDER_OFFSET", 5))
+            slider_offset = int(os.getenv("SLIDER_OFFSET", 2))
             final_distance += slider_offset
             
             logging.info(f"Captcha: Gap={gap_pos}, Scale={scale_factor:.2f}, Offset={slider_offset}, FinalDist={final_distance}")

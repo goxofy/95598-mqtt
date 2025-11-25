@@ -164,7 +164,9 @@ class SGCCSpider:
         time.sleep(self.retry_delay)
 
         inputs = driver.find_elements(By.CLASS_NAME, "el-input__inner")
+        logging.info("Inputting username...")
         inputs[0].send_keys(self.username)
+        logging.info("Inputting password...")
         inputs[1].send_keys(self.password)
 
         self._click_element(driver, By.CLASS_NAME, "el-button.el-button--primary")

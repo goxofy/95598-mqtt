@@ -84,7 +84,7 @@ python3 startup.py
 
 只要你的 Home Assistant 配置了 MQTT 集成，运行本项目后，上述数据实体会自动出现在 Home Assistant 中，无需任何手动配置。
 
-对于其他平台，请订阅配置的 MQTT Topic 前缀（默认 `sgcc/`）获取数据。
+对于其他平台，请订阅配置的 MQTT Topic 前缀（默认 `95598/`）获取数据。
 
 ## 环境变量说明
 

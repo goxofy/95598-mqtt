@@ -50,7 +50,10 @@ class SGCCSpider:
     def _click_element(self, driver, by, value):
         element = driver.find_element(by, value)
         WebDriverWait(driver, self.wait_time).until(EC.element_to_be_clickable(element))
-        driver.execute_script("arguments[0].click();", element)
+        try:
+            element.click()
+        except Exception:
+            driver.execute_script("arguments[0].click();", element)
 
     def simulate_slide(self, driver, distance):
         slider = driver.find_element(By.CLASS_NAME, "slide-verify-slider-mask-item")
@@ -142,6 +145,7 @@ class SGCCSpider:
             options.add_argument('--no-sandbox')
             options.add_argument('--disable-gpu')
             options.add_argument('--disable-dev-shm-usage')
+            options.add_argument("--window-size=1920,1080")
             
             driver_path = ChromeDriverManager().install()
             driver = webdriver.Chrome(options=options, service=ChromeService(driver_path))
@@ -157,7 +161,7 @@ class SGCCSpider:
             logging.debug(f"Failed to load login page: {URL_LOGIN}")
         
         time.sleep(self.retry_delay * 2)
-        driver.find_element(By.CLASS_NAME, "user").click()
+        self._click_element(driver, By.CLASS_NAME, "user")
         self._click_element(driver, By.XPATH, '//*[@id="login_box"]/div[1]/div[1]/div[2]/span')
         time.sleep(self.retry_delay)
         self._click_element(driver, By.XPATH, '//*[@id="login_box"]/div[2]/div[1]/form/div[1]/div[3]/div/span[2]')

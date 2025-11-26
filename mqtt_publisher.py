@@ -63,7 +63,14 @@ class MQTTPublisher:
             "icon": icon,
             "device_class": device_class,
             "state_class": state_class,
-            "platform": "mqtt"
+            "platform": "mqtt",
+            "device": {
+                "identifiers": [f"sgcc_{user_id}"],
+                "name": f"SGCC User {user_id}",
+                "manufacturer": "State Grid Corporation of China",
+                "model": "Electricity Monitor",
+                "sw_version": "1.0"
+            }
         }
         self.client.publish(config_topic, json.dumps(config_payload), retain=True)
         

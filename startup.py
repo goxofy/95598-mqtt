@@ -19,16 +19,20 @@ def setup_logging(level: str):
     logger.addHandler(sh)
 
 def execute_job(spider: SGCCSpider, max_retries: int):
-    for attempt in range(1, max_retries + 1):
-        try:
-            spider.run()
-            next_run = schedule.next_run()
-            if next_run:
-                logging.info(f"Going to sleep. Next run scheduled at: {next_run.strftime('%Y-%m-%d %H:%M:%S')}")
-            return
-        except Exception as e:
-            logging.error(f"Job failed (Attempt {attempt}/{max_retries}): {e}")
-            continue
+    try:
+        spider.run()
+        
+        # Calculate the real next run time (filter out past/current jobs)
+        now = datetime.now()
+        future_runs = [job.next_run for job in schedule.jobs if job.next_run and job.next_run > now]
+        if future_runs:
+            next_run = min(future_runs)
+            logging.info(f"Going to sleep. Next run scheduled at: {next_run.strftime('%Y-%m-%d %H:%M:%S')}")
+        else:
+            logging.info("Going to sleep. No future runs scheduled.")
+            
+    except Exception as e:
+        logging.error(f"Job failed: {e}")
 
 def main():
     if 'PYTHON_IN_DOCKER' not in os.environ: 

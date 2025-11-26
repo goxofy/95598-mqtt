@@ -76,44 +76,51 @@ class SGCCSpider:
         :return: List of x-offsets
         """
         tracks = []
-        current = 0
+        current = 0 # Integer current position
         mid = distance * 4 / 5 # Decelerate after 4/5
-        t = 0.2 # Time interval
+        t = 0.02 # Time interval (simulated) - reduced for smoother steps
         v = 0 # Initial velocity
         
         while current < distance:
             if current < mid:
                 # Acceleration phase
-                a = 2 + random.uniform(-0.5, 0.5)
+                a = random.randint(400, 600)
             else:
                 # Deceleration phase
-                a = -3 + random.uniform(-0.5, 0.5)
+                a = -random.randint(600, 800)
 
             v0 = v
             v = v0 + a * t
             move = v0 * t + 0.5 * a * t * t
-            current += move
-            tracks.append(round(move))
-
-        # Correction
-        generated_distance = sum(tracks)
-        diff = distance - generated_distance
-        if diff != 0:
-            tracks.append(diff)
             
+            # Ensure forward movement
+            if move < 1: move = 1
+            
+            move_int = round(move)
+            
+            # Check if this move overshoots
+            if current + move_int > distance:
+                move_int = distance - current
+            
+            tracks.append(move_int)
+            current += move_int
+            
+            if current >= distance:
+                break
+                
         return tracks
 
     def get_tracks_with_jitter(self, distance):
         """
-        Advanced tracks with Y-axis jitter and overshoot
+        Advanced tracks with Y-axis jitter
         """
         tracks = self.get_tracks(distance)
         
-        # Simulate overshoot
-        if random.choice([True, False]):
-            overshoot = random.randint(2, 5)
-            tracks.append(overshoot)
-            tracks.append(-overshoot)
+        # Overshoot removed based on user feedback (causes validation failure)
+        # if random.choice([True, False]):
+        #     overshoot = random.randint(2, 5)
+        #     tracks.append(overshoot)
+        #     tracks.append(-overshoot)
         
         return tracks
 
@@ -206,6 +213,11 @@ class SGCCSpider:
             options.add_argument('--disable-dev-shm-usage')
             options.add_argument("--window-size=1920,1080")
             
+            # Anti-detection options
+            options.add_argument("--disable-blink-features=AutomationControlled")
+            options.add_experimental_option("excludeSwitches", ["enable-automation"])
+            options.add_experimental_option('useAutomationExtension', False)
+            
             chrome_binary = os.getenv("CHROME_BINARY_PATH")
             # Fallback for Docker if env var is empty (overridden by .env)
             if not chrome_binary and os.environ.get('PYTHON_IN_DOCKER') == 'true':
@@ -226,6 +238,16 @@ class SGCCSpider:
                 service = ChromeService(driver_path)
                 
             driver = webdriver.Chrome(options=options, service=service)
+            
+            # CDP command to hide webdriver property
+            driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+                "source": """
+                    Object.defineProperty(navigator, 'webdriver', {
+                        get: () => undefined
+                    })
+                """
+            })
+            
             driver.implicitly_wait(self.wait_time)
         return driver
 
@@ -301,7 +323,8 @@ class SGCCSpider:
             base64_img = driver.execute_script(js_img)
             
             # Get rendered width (CSS width)
-            js_width = 'return document.getElementById("slideVerify").childNodes[0].clientWidth;'
+            # Get rendered width (CSS width) - Use getBoundingClientRect for float precision
+            js_width = 'return document.getElementById("slideVerify").childNodes[0].getBoundingClientRect().width;'
             rendered_width = driver.execute_script(js_width)
             
             img_data = base64_img.split(',')[1]
@@ -312,34 +335,34 @@ class SGCCSpider:
             
             gap_pos = self.resolver.solve_gap(image)
             
-            # Apply scaling
-            final_distance = int(gap_pos * scale_factor)
+            # Apply scaling and round to nearest integer
+            final_distance = int(round(gap_pos * scale_factor))
             
             # Apply manual offset
-            slider_offset = int(os.getenv("SLIDER_OFFSET", 2))
+            slider_offset = int(os.getenv("SLIDER_OFFSET", 5))
             final_distance += slider_offset
             
             logging.info(f"Captcha: Gap={gap_pos}, Scale={scale_factor:.2f}, Offset={slider_offset}, FinalDist={final_distance}")
             
             # Save debug image with lines
-            try:
-                from PIL import ImageDraw
-                debug_img = image.copy()
-                draw = ImageDraw.Draw(debug_img)
+            # try:
+            #     from PIL import ImageDraw
+            #     debug_img = image.copy()
+            #     draw = ImageDraw.Draw(debug_img)
                 
-                # Red line: Original VLM detection
-                draw.line([(gap_pos, 0), (gap_pos, debug_img.height)], fill="red", width=3)
+            #     # Red line: Original VLM detection
+            #     draw.line([(gap_pos, 0), (gap_pos, debug_img.height)], fill="red", width=3)
                 
-                # Green line: Final target (converted back to image scale)
-                final_target_on_image = int(final_distance / scale_factor)
-                draw.line([(final_target_on_image, 0), (final_target_on_image, debug_img.height)], fill="green", width=3)
+            #     # Green line: Final target (converted back to image scale)
+            #     final_target_on_image = int(final_distance / scale_factor)
+            #     draw.line([(final_target_on_image, 0), (final_target_on_image, debug_img.height)], fill="green", width=3)
                 
-                timestamp = time.strftime("%Y%m%d_%H%M%S")
-                debug_path = f"./errors/captcha_{timestamp}.png"
-                debug_img.save(debug_path)
-                logging.info(f"Saved debug captcha image to {debug_path}")
-            except Exception as e:
-                logging.warning(f"Failed to save debug image: {e}")
+            #     timestamp = time.strftime("%Y%m%d_%H%M%S")
+            #     debug_path = f"./errors/captcha_{timestamp}.png"
+            #     debug_img.save(debug_path)
+            #     logging.info(f"Saved debug captcha image to {debug_path}")
+            # except Exception as e:
+            #     logging.warning(f"Failed to save debug image: {e}")
 
             self.simulate_slide(driver, final_distance)
             time.sleep(self.retry_delay)
@@ -348,13 +371,13 @@ class SGCCSpider:
                 logging.info(f"Login failed (Attempt {attempt}), retrying captcha...")
                 
                 # Capture screenshot to see the error message
-                try:
-                    timestamp = time.strftime("%Y%m%d_%H%M%S")
-                    error_shot_path = f"./errors/login_fail_{timestamp}.png"
-                    driver.save_screenshot(error_shot_path)
-                    logging.info(f"Saved login failure screenshot to {error_shot_path}")
-                except Exception as e:
-                    logging.warning(f"Failed to save failure screenshot: {e}")
+                # try:
+                #     timestamp = time.strftime("%Y%m%d_%H%M%S")
+                #     error_shot_path = f"./errors/login_fail_{timestamp}.png"
+                #     driver.save_screenshot(error_shot_path)
+                #     logging.info(f"Saved login failure screenshot to {error_shot_path}")
+                # except Exception as e:
+                #     logging.warning(f"Failed to save failure screenshot: {e}")
 
                 self._click_element(driver, By.CLASS_NAME, "el-button.el-button--primary")
                 time.sleep(self.retry_delay * 2)
@@ -369,19 +392,31 @@ class SGCCSpider:
         # Force window size for headless mode
         driver.set_window_size(1920, 1080)
         size = driver.get_window_size()
-        logging.info(f"Driver initialized. Window size: {size}")
+        pixel_ratio = driver.execute_script("return window.devicePixelRatio;")
+        logging.info(f"Driver initialized. Window size: {size}, DevicePixelRatio: {pixel_ratio}")
+        
+        # Start Screen Recording
+        # from recorder import ScreenRecorder
+        # timestamp = time.strftime("%Y%m%d_%H%M%S")
+        # video_path = f"./errors/record_{timestamp}.avi"
+        # recorder = ScreenRecorder(driver, video_path, fps=3.0)
+        # recorder.start()
         
         publisher = MQTTPublisher()
         
         try:
             if self.perform_login(driver):
                 logging.info("Login successful!")
+                # Stop recording immediately after success to save time/space
+                # recorder.stop()
             else:
                 logging.error("Login failed!")
+                # recorder.stop()
                 driver.quit()
                 return
         except Exception as e:
             logging.error(f"Login exception: {e}")
+            # recorder.stop()
             driver.quit()
             return
 
@@ -410,6 +445,7 @@ class SGCCSpider:
 
         logging.info("All tasks completed successfully.")
         self.cleanup_debug_images()
+        # recorder.stop()
         driver.quit()
 
     def cleanup_debug_images(self):

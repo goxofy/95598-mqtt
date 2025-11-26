@@ -103,7 +103,7 @@ class CaptchaResolver:
             model_width = 416
             scale_ratio = original_width / model_width
             
-            x_coordinate = boxes[..., :4].astype(np.int32)[0][0]
-            scaled_x = int(x_coordinate * scale_ratio)
+            x_coordinate = boxes[..., :4][0][0] # Keep as float
+            scaled_x = x_coordinate * scale_ratio
             
             return scaled_x

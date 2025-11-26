@@ -86,7 +86,7 @@ class VLMCaptchaResolver:
             
             real_x_offset = (x_center_normalized / 1000) * real_width
             
-            return int(real_x_offset)
+            return real_x_offset
             
         except Exception as e:
             logging.error(f"VLM Solver failed: {e}")

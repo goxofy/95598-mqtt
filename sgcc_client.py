@@ -407,8 +407,16 @@ class SGCCSpider:
         try:
             if self.perform_login(driver):
                 logging.info("Login successful!")
-                # Stop recording immediately after success to save time/space
+                # Stop recording immediately after success
                 recorder.stop()
+                
+                # Delete video if successful (User request)
+                try:
+                    if os.path.exists(video_path):
+                        os.remove(video_path)
+                        logging.info(f"Login successful, deleted recording: {video_path}")
+                except Exception as e:
+                    logging.warning(f"Failed to delete recording: {e}")
             else:
                 logging.error("Login failed!")
                 recorder.stop()

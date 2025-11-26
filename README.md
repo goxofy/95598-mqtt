@@ -100,4 +100,4 @@ python3 startup.py
 | `SLIDER_OFFSET` | 验证码滑块偏移微调（-2 ~ 20） | `5` |
 | `IGNORE_USER_ID` | 忽略的户号(逗号分隔) | (空) |
 
-*SLIDER_OFFSET 这个参数非常重要！如果持续登录报错，请不断调整这个数值，我这里是 5 最合适*
+*SLIDER_OFFSET 这个参数非常重要！如果持续登录报错，请观看 errors 文件夹内的失败视频,酌情调整此参数*

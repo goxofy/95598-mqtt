@@ -77,19 +77,17 @@ class SGCCSpider:
         """
         tracks = []
         current = 0 # Integer current position
-        mid = distance * 4 / 5 # Decelerate after 4/5
-        t = 0.02 # Time interval (simulated) - reduced for smoother steps
+        mid = distance * 3 / 5 # Decelerate after 3/5 (was 4/5)
+        t = 0.02 # Time interval (simulated) - Reverted to 20ms per user request
         v = 0 # Initial velocity
-        
-        speed_multiplier = float(os.getenv("SLIDER_SPEED", 1.0))
         
         while current < distance:
             if current < mid:
                 # Acceleration phase
-                a = random.randint(400, 600) * speed_multiplier
+                a = random.randint(400, 600)
             else:
-                # Deceleration phase
-                a = -random.randint(600, 800) * speed_multiplier
+                # Deceleration phase - Increased force to ensure slowdown
+                a = -random.randint(1000, 1200)
 
             v0 = v
             v = v0 + a * t

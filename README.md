@@ -98,6 +98,7 @@ python3 startup.py
 | `MQTT_PASSWORD` | MQTT 密码 | (空) |
 | `JOB_START_TIME` | 每天定时运行时间 | `07:00` |
 | `SLIDER_OFFSET` | 验证码滑块偏移微调（-2 ~ 10） | `5` |
+| `SLIDER_SPEED` | 滑块拖动速度倍率（>1变快，<1变慢） | `1.0` |
 | `IGNORE_USER_ID` | 忽略的户号(逗号分隔) | (空) |
 
 *SLIDER_OFFSET 这个参数非常重要！如果持续登录报错，请不断调整这个数值，我这里是 5 最合适*

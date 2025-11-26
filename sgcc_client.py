@@ -81,13 +81,15 @@ class SGCCSpider:
         t = 0.02 # Time interval (simulated) - reduced for smoother steps
         v = 0 # Initial velocity
         
+        speed_multiplier = float(os.getenv("SLIDER_SPEED", 1.0))
+        
         while current < distance:
             if current < mid:
                 # Acceleration phase
-                a = random.randint(400, 600)
+                a = random.randint(400, 600) * speed_multiplier
             else:
                 # Deceleration phase
-                a = -random.randint(600, 800)
+                a = -random.randint(600, 800) * speed_multiplier
 
             v0 = v
             v = v0 + a * t
@@ -396,11 +398,11 @@ class SGCCSpider:
         logging.info(f"Driver initialized. Window size: {size}, DevicePixelRatio: {pixel_ratio}")
         
         # Start Screen Recording
-        # from recorder import ScreenRecorder
-        # timestamp = time.strftime("%Y%m%d_%H%M%S")
-        # video_path = f"./errors/record_{timestamp}.avi"
-        # recorder = ScreenRecorder(driver, video_path, fps=3.0)
-        # recorder.start()
+        from recorder import ScreenRecorder
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        video_path = f"./errors/record_{timestamp}.avi"
+        recorder = ScreenRecorder(driver, video_path, fps=3.0)
+        recorder.start()
         
         publisher = MQTTPublisher()
         
@@ -408,15 +410,15 @@ class SGCCSpider:
             if self.perform_login(driver):
                 logging.info("Login successful!")
                 # Stop recording immediately after success to save time/space
-                # recorder.stop()
+                recorder.stop()
             else:
                 logging.error("Login failed!")
-                # recorder.stop()
+                recorder.stop()
                 driver.quit()
                 return
         except Exception as e:
             logging.error(f"Login exception: {e}")
-            # recorder.stop()
+            recorder.stop()
             driver.quit()
             return
 
@@ -445,7 +447,7 @@ class SGCCSpider:
 
         logging.info("All tasks completed successfully.")
         self.cleanup_debug_images()
-        # recorder.stop()
+        recorder.stop()
         driver.quit()
 
     def cleanup_debug_images(self):

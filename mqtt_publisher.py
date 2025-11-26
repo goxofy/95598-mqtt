@@ -66,7 +66,7 @@ class MQTTPublisher:
             "platform": "mqtt",
             "device": {
                 "identifiers": [f"sgcc_{user_id}"],
-                "name": f"SGCC User {user_id}",
+                "name": f"95598 AccountNo. {user_id}",
                 "manufacturer": "State Grid Corporation of China",
                 "model": "Electricity Monitor",
                 "sw_version": "1.0"

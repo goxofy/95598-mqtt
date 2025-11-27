@@ -13,5 +13,5 @@ DEFAULT_COMPONENT = "sensor"
 
 # Units
 UNIT_MONEY = "CNY"
-UNIT_ENERGY = "KWH"
+UNIT_ENERGY = "kWh"
 

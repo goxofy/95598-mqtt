@@ -38,7 +38,7 @@ class MQTTPublisher:
             self.publish_sensor(user_id, "yearly_charge", yearly_charge, UNIT_MONEY, "mdi:cash", "monetary", "total_increasing")
             
         if month_usage is not None:
-            self.publish_sensor(user_id, "month_usage", month_usage, UNIT_ENERGY, "mdi:lightning-bolt", "energy", "measurement")
+            self.publish_sensor(user_id, "month_usage", month_usage, UNIT_ENERGY, "mdi:lightning-bolt", "energy", "total_increasing")
             
         if month_charge is not None:
             self.publish_sensor(user_id, "month_charge", month_charge, UNIT_MONEY, "mdi:cash", "monetary", "measurement")
@@ -50,13 +50,13 @@ class MQTTPublisher:
         Publish sensor data to MQTT and send Auto Discovery config
         """
         sensor_name = f"{sensor_type}_{user_id[-4:]}"
-        unique_id = f"sgcc_{user_id}_{sensor_type}"
+        unique_id = f"{user_id}_{sensor_type}"
         state_topic = f"{self.topic_prefix}/{user_id}/{sensor_type}/state"
         config_topic = f"{DEFAULT_DISCOVERY_PREFIX}/{DEFAULT_COMPONENT}/sgcc_{user_id}/{sensor_type}/config"
         
         # 1. Publish Auto Discovery Config (Retained)
         config_payload = {
-            "name": f"SGCC {user_id} {sensor_type.replace('_', ' ').title()}",
+            "name": f"{user_id} {sensor_type.replace('_', ' ').title()}",
             "unique_id": unique_id,
             "state_topic": state_topic,
             "unit_of_measurement": unit,

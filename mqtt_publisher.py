@@ -16,13 +16,21 @@ class MQTTPublisher:
         self.client = mqtt.Client()
         if self.username and self.password:
             self.client.username_pw_set(self.username, self.password)
+            
+        self.client.on_connect = self.on_connect
         
         try:
+            logging.info(f"Attempting to connect to MQTT Broker: {self.broker}:{self.port}...")
             self.client.connect(self.broker, self.port, 60)
             self.client.loop_start()
-            logging.info(f"Connected to MQTT Broker: {self.broker}:{self.port}")
         except Exception as e:
-            logging.error(f"Failed to connect to MQTT Broker: {e}")
+            logging.error(f"Failed to initiate MQTT connection: {e}")
+
+    def on_connect(self, client, userdata, flags, rc):
+        if rc == 0:
+            logging.info("Successfully connected to MQTT Broker!")
+        else:
+            logging.error(f"Failed to connect to MQTT Broker with return code {rc}")
 
     def publish_user_data(self, user_id: str, balance: float, last_daily_date: str, last_daily_usage: float, yearly_charge: float, yearly_usage: float, month_charge: float, month_usage: float):
         if balance is not None:

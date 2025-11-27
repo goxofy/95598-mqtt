@@ -60,7 +60,7 @@ class MQTTPublisher:
         sensor_name = f"{sensor_type}_{user_id[-4:]}"
         unique_id = f"{user_id}_{sensor_type}"
         state_topic = f"{self.topic_prefix}/{user_id}/{sensor_type}/state"
-        config_topic = f"{DEFAULT_DISCOVERY_PREFIX}/{DEFAULT_COMPONENT}/sgcc_{user_id}/{sensor_type}/config"
+        config_topic = f"{DEFAULT_DISCOVERY_PREFIX}/{DEFAULT_COMPONENT}/95598_{user_id}/{sensor_type}/config"
         
         # 1. Publish Auto Discovery Config (Retained)
         config_payload = {
@@ -73,7 +73,7 @@ class MQTTPublisher:
             "state_class": state_class,
             "platform": "mqtt",
             "device": {
-                "identifiers": [f"sgcc_{user_id}"],
+                "identifiers": [f"95598_{user_id}"],
                 "name": f"95598 AccountNo. {user_id}",
                 "manufacturer": "State Grid Corporation of China",
                 "model": "Electricity Monitor",

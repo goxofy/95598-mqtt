@@ -33,6 +33,7 @@
 
 ```bash
 docker run -d \
+  --init \
   --name 95598-mqtt \
   --restart unless-stopped \
   -v $(pwd)/data:/data \
@@ -96,8 +97,10 @@ python3 startup.py
 | `MQTT_PORT` | MQTT 端口 | `1883` |
 | `MQTT_USER` | MQTT 用户名 | (空) |
 | `MQTT_PASSWORD` | MQTT 密码 | (空) |
-| `JOB_START_TIME` | 每天定时运行时间 | `07:00` |
-| `SLIDER_OFFSET` | 验证码滑块偏移微调（-2 ~ 20） | `5` |
+| `JOB_START_TIME` | 每天定时运行时间(12小时循环) | `07:00` |
+| `SLIDER_OFFSET` | 验证码滑块偏移微调（-2 ~ 20） | `8` |
 | `IGNORE_USER_ID` | 忽略的户号(逗号分隔) | (空) |
 
-*SLIDER_OFFSET 这个参数非常重要！如果持续登录报错，请观看 errors 文件夹内的失败视频，酌情调整此参数*
+*SLIDER_OFFSET 这个参数非常重要！*
+*如果持续登录报错，请观看 errors 文件夹内的失败视频，酌情调整此参数*
+*此参数在不同设备不同架构不同环境内的值不完全相同，但只要设置合理成功登录后，基本不会发生变化*

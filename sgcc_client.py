@@ -387,74 +387,82 @@ class SGCCSpider:
         
     def run(self):
         driver = self.init_driver()
-        ScreenshotOnFailure.set_driver(driver)
-        
-        # Force window size for headless mode
-        driver.set_window_size(1920, 1080)
-        size = driver.get_window_size()
-        pixel_ratio = driver.execute_script("return window.devicePixelRatio;")
-        logging.info(f"Driver initialized. Window size: {size}, DevicePixelRatio: {pixel_ratio}")
-        
-        # Start Screen Recording
-        from recorder import ScreenRecorder
-        timestamp = time.strftime("%Y%m%d_%H%M%S")
-        video_path = f"./errors/record_{timestamp}.avi"
-        recorder = ScreenRecorder(driver, video_path, fps=3.0)
-        recorder.start()
-        
-        publisher = MQTTPublisher()
-        
         try:
-            if self.perform_login(driver):
-                logging.info("Login successful!")
-                # Stop recording immediately after success
-                recorder.stop()
-                
-                # Delete video if successful (User request)
-                try:
-                    if os.path.exists(video_path):
-                        os.remove(video_path)
-                        logging.info(f"Login successful, deleted recording: {video_path}")
-                except Exception as e:
-                    logging.warning(f"Failed to delete recording: {e}")
-            else:
-                logging.error("Login failed!")
-                recorder.stop()
-                driver.quit()
-                return
-        except Exception as e:
-            logging.error(f"Login exception: {e}")
-            recorder.stop()
-            driver.quit()
-            return
-
-        time.sleep(self.retry_delay)
-        user_ids = self.get_user_ids(driver)
-        logging.info(f"Found users: {user_ids}")
-
-        for index, user_id in enumerate(user_ids):
-            if user_id in self.ignored_users:
-                logging.info(f"Skipping ignored user: {user_id}")
-                continue
-
+            ScreenshotOnFailure.set_driver(driver)
+            
+            # Force window size for headless mode
+            driver.set_window_size(1920, 1080)
+            size = driver.get_window_size()
+            pixel_ratio = driver.execute_script("return window.devicePixelRatio;")
+            logging.info(f"Driver initialized. Window size: {size}, DevicePixelRatio: {pixel_ratio}")
+            
+            # Start Screen Recording
+            from recorder import ScreenRecorder
+            timestamp = time.strftime("%Y%m%d_%H%M%S")
+            video_path = f"./errors/record_{timestamp}.avi"
+            recorder = ScreenRecorder(driver, video_path, fps=3.0)
+            recorder.start()
+            
+            publisher = MQTTPublisher()
+            
             try:
-                driver.get(URL_BALANCE)
-                time.sleep(self.retry_delay)
-                self.select_user(driver, index)
-                time.sleep(self.retry_delay)
-                
-                data = self.collect_data(driver, user_id, index)
-                publisher.publish_user_data(user_id, *data)
-                
-                time.sleep(self.retry_delay)
+                if self.perform_login(driver):
+                    logging.info("Login successful!")
+                    # Stop recording immediately after success
+                    recorder.stop()
+                    
+                    # Delete video if successful (User request)
+                    try:
+                        if os.path.exists(video_path):
+                            os.remove(video_path)
+                            logging.info(f"Login successful, deleted recording: {video_path}")
+                    except Exception as e:
+                        logging.warning(f"Failed to delete recording: {e}")
+                else:
+                    logging.error("Login failed!")
+                    recorder.stop()
+                    return
             except Exception as e:
-                logging.error(f"Failed to process user {user_id}: {e}")
-                continue
-
-        logging.info("All tasks completed successfully.")
-        self.cleanup_debug_images()
-        recorder.stop()
-        driver.quit()
+                logging.error(f"Login exception: {e}")
+                recorder.stop()
+                return
+    
+            time.sleep(self.retry_delay)
+            user_ids = self.get_user_ids(driver)
+            logging.info(f"Found users: {user_ids}")
+    
+            for index, user_id in enumerate(user_ids):
+                if user_id in self.ignored_users:
+                    logging.info(f"Skipping ignored user: {user_id}")
+                    continue
+    
+                try:
+                    driver.get(URL_BALANCE)
+                    time.sleep(self.retry_delay)
+                    self.select_user(driver, index)
+                    time.sleep(self.retry_delay)
+                    
+                    data = self.collect_data(driver, user_id, index)
+                    publisher.publish_user_data(user_id, *data)
+                    
+                    time.sleep(self.retry_delay)
+                except Exception as e:
+                    logging.error(f"Failed to process user {user_id}: {e}")
+                    continue
+    
+            logging.info("All tasks completed successfully.")
+            self.cleanup_debug_images()
+            recorder.stop()
+            
+        except Exception as e:
+            logging.error(f"Unexpected error in run: {e}")
+        finally:
+            if driver:
+                logging.info("Quitting driver...")
+                try:
+                    driver.quit()
+                except Exception as e:
+                    logging.error(f"Error quitting driver: {e}")
 
     def cleanup_debug_images(self):
         try:

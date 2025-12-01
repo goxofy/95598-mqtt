@@ -1,5 +1,6 @@
 services:
   95598-mqtt:
+    init: true
     image: ghcr.io/goxofy/95598-mqtt:main
     container_name: 95598-mqtt
     restart: unless-stopped
